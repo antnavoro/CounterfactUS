@@ -23,11 +23,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-[project.urls]
-Homepage = "https://github.com/antnavoro/CounterfactUS"
-Repository = "https://github.com/antnavoro/CounterfactUS"
-"Bug Tracker" = "https://github.com/antnavoro/CounterfactUS/issues"
-
 dependencies = [
     "numpy",
     "pandas",
@@ -37,6 +32,11 @@ dependencies = [
     "rpy2",
     "gurobipy",
 ]
+
+[project.urls]
+Homepage = "https://github.com/antnavoro/CounterfactUS"
+Repository = "https://github.com/antnavoro/CounterfactUS"
+"Bug Tracker" = "https://github.com/antnavoro/CounterfactUS/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
