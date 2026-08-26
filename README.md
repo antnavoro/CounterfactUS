@@ -17,7 +17,12 @@
 
 ## Installation
 
-This package requires Python 3.9+ and an active Gurobi license (or academic license, https://www.gurobi.com/academics) to solve the MIP problems. Additionally, it requires an R installation with the `mgcv` and `gplsim` packages available.
+This package requires Python 3.9+ and an active Gurobi license (or academic license, https://www.gurobi.com/academics) to solve the MIP problems. 
+
+Additionally, it requires an R installation. You must manually install the required R packages by opening your R console and running:
+```R
+install.packages(c("mgcv", "gplsim"))
+```
 
 You can install the package directly via pip:
 
