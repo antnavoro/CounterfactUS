@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "CounterfactUS"
+version         = "0.1.0"
+description     = "Optimal and robust counterfactual explanations"
+readme          = "README.md"
+requires-python = ">=3.9"
+authors = [
+  { name = "Antonio Navas Orozco", email = "anavas1@us.es" }
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/antnavoro/CounterfactUS"
+Repository = "https://github.com/antnavoro/CounterfactUS"
+"Bug Tracker" = "https://github.com/antnavoro/CounterfactUS/issues"
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "scipy",
+    "rpy2",
+    "gurobipy",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
