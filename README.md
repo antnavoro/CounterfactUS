@@ -2,7 +2,7 @@
 
 **CounterfactUS** is a Python library designed to generate optimal and robust counterfactual explanations for predictive models. It formulates the counterfactual generation as a Mixed-Integer Programming (MIP) problem, allowing for exact counterfactuals.
 
-## 🚀 Key Features
+## Key Features
 
 *   **Model Support:** Designed for Generalized Partially Linear Single-Index Models (GPLSIM), including special subcases like Single-Index Models (SIM) and Generalized Linear Models (GLM). (Uses R's `mgcv` and `gplsim` internally).
 *   **Optimal Explanations:** Uses Gurobi as an optimization backend to find counterfactuals that minimize distance exactly, rather than relying on heuristics.
@@ -15,9 +15,9 @@
     *   **Linear Constraints:** Define linear relationships (e.g., $X_1 + X_2 \le b$).
 *   **Automated Preprocessing:** Automatically infers feature types (binary, categorical, continuous), normalizes data, and handles one-hot encoding internally.
 
-## 📦 Installation
+## Installation
 
-This package requires Python 3.9+ and an active Gurobi license (or academic license) to solve the MIP problems. Additionally, it requires an R installation with the `mgcv` and `gplsim` packages available.
+This package requires Python 3.9+ and an active Gurobi license (or academic license, https://www.gurobi.com/academics) to solve the MIP problems. Additionally, it requires an R installation with the `mgcv` and `gplsim` packages available.
 
 You can install the package directly via pip:
 
@@ -27,7 +27,7 @@ pip install CounterfactUS
 
 *Note: Ensure that your system's R environment is accessible to Python via `rpy2`.*
 
-## 💡 Quick Start
+## Quick Start
 
 Generating counterfactuals is as simple as calling the `compute_counterfactuals` function. 
 
@@ -65,7 +65,7 @@ results_df = compute_counterfactuals(
 print(results_df)
 ```
 
-## ⚙️ Advanced Usage
+## Advanced Usage
 
 `compute_counterfactuals` handles complex parameter grids natively. You can pass lists to parameters like `prediction_threshold`, `max_l0`, or `confidence_level` to explore the Pareto frontier of counterfactuals. 
 
@@ -87,6 +87,6 @@ results = compute_counterfactuals(
 )
 ```
 
-## 📄 License
+## License
 
 MIT License
