@@ -40,12 +40,6 @@ _mgcv = importr("mgcv")
 # Global defaults — change here to affect all four model types at once.
 # ---------------------------------------------------------------------------
 
-# Spline basis type: "ps" = P-splines (gplsim default), "cr" = cubic regression.
-SPLINE_BASIS = "ps"
-
-# Smoothing parameter selection: "GCV.Cp" = generalized cross-validation.
-SMOOTH_METHOD = "GCV.Cp"
-
 # Default for the number of points to generate for the spline fitting
 DEFAULT_POINTS = 500
 
@@ -130,7 +124,7 @@ def _fit_glm(X, Z, Y, family_name, link_name, robustness=False) -> tuple:
 # Case 3: GAM with a single univariate smooth
 # ---------------------------------------------------------------------------
 
-def _fit_gam_single(X, Z, Y, family_name, link_name, points=DEFAULT_POINTS, robustness=False, include_tau=False, spline_degree=None, num_nodes=None) -> tuple:
+def _fit_gam_single(X, Z, Y, family_name, link_name, points=DEFAULT_POINTS, robustness=False, include_tau=False, spline_degree=None, num_knots=None, spline_basis="ps", smooth_method="GCV.Cp") -> tuple:
     """
     Fit g(mu) = eta(x) [+ Z gamma] via mgcv::gam with one smooth term.
     X must have exactly 1 column (the smooth variable).
@@ -154,9 +148,9 @@ def _fit_gam_single(X, Z, Y, family_name, link_name, points=DEFAULT_POINTS, robu
     ro.globalenv["x_sm_r"] = ro.FloatVector(x_smooth)
     ro.r(f'fam_r <- {family_name}(link="{link_name}")')
 
-    s_args = f'bs="{SPLINE_BASIS}"'
-    if num_nodes is not None:
-        s_args += f', k={num_nodes}'
+    s_args = f'bs="{spline_basis}"'
+    if num_knots is not None:
+        s_args += f', k={num_knots}'
     if spline_degree is not None:
         s_args += f', m={spline_degree - 1}'
 
@@ -167,12 +161,12 @@ def _fit_gam_single(X, Z, Y, family_name, link_name, points=DEFAULT_POINTS, robu
         )
         ro.r(
             f'model_r <- mgcv::gam(Y_r ~ s(x_sm_r, {s_args}) + X_lin, '
-            f'family=fam_r, method="{SMOOTH_METHOD}")'
+            f'family=fam_r, method="{smooth_method}")'
         )
     else:
         ro.r(
             f'model_r <- mgcv::gam(Y_r ~ s(x_sm_r, {s_args}), '
-            f'family=fam_r, method="{SMOOTH_METHOD}")'
+            f'family=fam_r, method="{smooth_method}")'
         )
 
     coefs = _r_to_array(ro.r("model_r$coefficients"))
@@ -214,7 +208,7 @@ def _fit_gam_single(X, Z, Y, family_name, link_name, points=DEFAULT_POINTS, robu
 # Case 4: GPLSIM  (two or more single-index components)
 # ---------------------------------------------------------------------------
 
-def _fit_gplsim(X, Z, Y, family_name, link_name, user_init=None, points=DEFAULT_POINTS, robustness=False, include_tau=False, spline_degree=None, num_nodes=None) -> tuple:
+def _fit_gplsim(X, Z, Y, family_name, link_name, user_init=None, points=DEFAULT_POINTS, robustness=False, include_tau=False, spline_degree=None, num_knots=None, spline_basis="ps", smooth_method="GCV.Cp") -> tuple:
     """
     Fit g(mu) = eta(beta^T X) [+ Z gamma] via the gplsim R package.
     X is the single-index matrix (2+ columns); Z is the optional linear part.
@@ -255,8 +249,8 @@ def _fit_gplsim(X, Z, Y, family_name, link_name, user_init=None, points=DEFAULT_
         ro.r(f'fam_r <- {family_name}()')
 
     extra_args = ""
-    if num_nodes is not None:
-        extra_args += f', k={num_nodes}'
+    if num_knots is not None:
+        extra_args += f', k={num_knots}'
     if spline_degree is not None:
         extra_args += f', m={spline_degree - 1}'
     else:
@@ -269,13 +263,13 @@ def _fit_gplsim(X, Z, Y, family_name, link_name, user_init=None, points=DEFAULT_
         )
         ro.r(
             f'model_r <- gplsim(Y_r, X_si_r, Z=X_lin_r, family=fam_r, '
-            f'bs="{SPLINE_BASIS}", method="{SMOOTH_METHOD}"{extra_args}{user_init_arg})'
+            f'bs="{spline_basis}", method="{smooth_method}"{extra_args}{user_init_arg})'
         )
     else:
         # Z=NULL prevents R's lazy-evaluation 'promise already under evaluation' crash.
         ro.r(
             f'model_r <- gplsim(Y_r, X_si_r, Z=NULL, family=fam_r, '
-            f'bs="{SPLINE_BASIS}", method="{SMOOTH_METHOD}"{extra_args}{user_init_arg})'
+            f'bs="{spline_basis}", method="{smooth_method}"{extra_args}{user_init_arg})'
         )
 
     # --- Extract beta (single-index direction) and gamma (linear coefficients) ---
@@ -340,7 +334,9 @@ def fit_gplsim_loglik(
     robustness  : bool = False,
     include_tau : bool = False,
     spline_degree: Optional[int] = None,
-    num_nodes: Optional[int] = None,
+    num_knots: Optional[int] = None,
+    spline_basis: str = "ps",
+    smooth_method: str = "GCV.Cp",
 ) -> tuple:
     """
     Fit the appropriate model and return its parametric representation, predictions, and optionally covariance components.
@@ -367,7 +363,7 @@ def fit_gplsim_loglik(
     robustness  : bool (Whether to compute and return sandwich covariance and analytic H)
     include_tau : bool (Whether to include scale parameter tau in covariance, e.g. for gaussian)
     spline_degree : int (Degree of the polynomial piece fit, defaults to 3)
-    num_nodes   : int (Number of spline basis nodes, k in mgcv/gplsim)
+    num_knots   : int (Number of spline basis knots, k in mgcv/gplsim)
 
     Returns
     -------
@@ -405,8 +401,8 @@ def fit_gplsim_loglik(
     elif not has_x:
         res = _fit_glm(X, Z, Y, family_name, link_name, robustness)
     elif n_si == 1:
-        res = _fit_gam_single(X, Z, Y, family_name, link_name, points, robustness, include_tau, spline_degree, num_nodes)
+        res = _fit_gam_single(X, Z, Y, family_name, link_name, points, robustness, include_tau, spline_degree, num_knots, spline_basis, smooth_method)
     else:
-        res = _fit_gplsim(X, Z, Y, family_name, link_name, user_init, points, robustness, include_tau, spline_degree, num_nodes)
+        res = _fit_gplsim(X, Z, Y, family_name, link_name, user_init, points, robustness, include_tau, spline_degree, num_knots, spline_basis, smooth_method)
 
     return res

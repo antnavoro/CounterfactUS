@@ -18,7 +18,6 @@ from typing import Optional, Union, List, Dict, Tuple
 from .fit_GPLSIM import fit_gplsim_loglik
 from .solver import GPLSIM_CE
 
-MIN_PARETO_POINTS = 3
 DEFAULT_WEIGHTS = True
 DEFAULT_BOUNDS  = True
 SAVE_TIME = False
@@ -127,7 +126,14 @@ def _align_query(query_data, base_col_names, base_df, mappings):
         return None
     
     if not hasattr(query_data, 'columns'):
-        query_data = pd.DataFrame(query_data, columns=base_col_names)
+        if isinstance(query_data, pd.Series):
+            query_data = pd.DataFrame([query_data], columns=base_col_names)
+        else:
+            arr = np.array(query_data)
+            if arr.ndim == 1 and not (isinstance(query_data, list) and len(query_data) > 0 and isinstance(query_data[0], dict)):
+                query_data = pd.DataFrame([query_data], columns=base_col_names)
+            else:
+                query_data = pd.DataFrame(query_data, columns=base_col_names)
         
     q_df = pd.DataFrame(index=query_data.index)
     
@@ -384,7 +390,9 @@ def compute_counterfactuals(
     col_names_X:     Optional[List[str]] = None,
     col_names_Z:     Optional[List[str]] = None,
     spline_degree: int = None,
-    num_nodes:     int = None,
+    num_knots:     int = None,
+    spline_basis:  str = "ps",
+    smooth_method: str = "GCV.Cp",
     r_verbose:     bool = False,
     user_init:     Optional[Union[np.ndarray, pd.Series, pd.DataFrame, List]] = None,
 
@@ -544,7 +552,9 @@ def compute_counterfactuals(
                 user_init=user_init,
                 robustness=True,
                 spline_degree=spline_degree,
-                num_nodes=num_nodes
+                num_knots=num_knots,
+                spline_basis=spline_basis,
+                smooth_method=smooth_method
             )
     else:
         beta, gamma, knots, coeffs, y_pred_r = fit_gplsim_loglik(
@@ -554,7 +564,9 @@ def compute_counterfactuals(
                 user_init=user_init,
                 robustness=False,
                 spline_degree=spline_degree,
-                num_nodes=num_nodes
+                num_knots=num_knots,
+                spline_basis=spline_basis,
+                smooth_method=smooth_method
             )
         cov_matrix, H_analytic = None, None
 
