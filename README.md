@@ -68,6 +68,7 @@ results_df = compute_counterfactuals(
 
 # 4. View results
 print(results_df)
+# The results are also saved in a CSV file in the current working directory.
 ```
 
 ## Advanced Usage
