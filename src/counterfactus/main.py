@@ -901,11 +901,13 @@ def compute_counterfactuals(
     # Save to CSV
     if output_csv is None:
         output_csv = "counterfactuals_results.csv"
-    results_df.to_csv(output_csv, index=False)
-    print(f"\nResults saved to {output_csv}")
+        
+    if output_csv != '':
+        results_df.to_csv(output_csv, index=False)
+        print(f"\nResults saved to {output_csv}")
     
     if plot_figures:
-        _generate_plots(results_df, output_csv)
+        _generate_plots(results_df, output_csv if output_csv != '' else "counterfactuals_results.csv")
     
     return results_df
 
