@@ -4,12 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "CounterfactUS"
-version         = "0.1.2"
-description     = "Optimal and robust counterfactual explanations"
+version         = "0.1.3"
+description     = "Optimal and robust counterfactual explanations for GPLSIMs"
 readme          = "README.md"
 requires-python = ">=3.9"
 authors = [
-  { name = "Antonio Navas Orozco", email = "anavas1@us.es" }
+  { name = "Antonio Navas Orozco", email = "anavas1@us.es" },
+  { name = "María Alonso Pena" },
+  { name = "Emilio Carrizosa" }
 ]
 license = { file = "LICENSE" }
 classifiers = [
