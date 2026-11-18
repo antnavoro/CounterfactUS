@@ -54,15 +54,15 @@ results_df = compute_counterfactuals(
     X=X_train, 
     Z=Z_train, 
     Y=Y_train,
-    family_name="binomial", 
-    link_name="logit",
+    family="binomial", 
+    link="logit",
     prediction_threshold=0.5,       # Target prediction threshold
     x0s=x_queries,
     z0s=z_queries,
     distance="l1",                  # Distance metric to minimize
     max_l0=2,                       # Allow a maximum of 2 feature changes
     confidence_level=0.95,          # Ensure 95% statistical confidence in the recourse
-    inmutable_z=["Race", "Age"],    # Prevent certain features from changing
+    immutable_z=["Race", "Age"],    # Prevent certain features from changing
     gurobi_verbose=False
 )
 

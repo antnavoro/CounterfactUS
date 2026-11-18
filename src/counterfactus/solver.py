@@ -33,7 +33,7 @@ def robust_cholesky(matrix, eps=1e-8, name=""):
 
 
 
-def GPLSIM_CE(beta, gamma, knots, coeffs, init_x, init_z, x0, z0, family, link, prediction_threshold, distance_threshold, distance_metric, max_l0, inmutable_x, inmutable_z, X_mins, X_maxs, Z_mins, Z_maxs, col_names_X, col_names_Z, var_types_X, var_types_Z, dropped_cats_X, dropped_cats_Z, objective, weights_x, bounds_x, weights_z, bounds_z, A_x, A_z, b, confidence_level, cov_matrix, H_analytic, gurobi_verbose, gurobi_params, gurobi_log):
+def GPLSIM_CE(beta, gamma, knots, coeffs, init_x, init_z, x0, z0, family, link, prediction_threshold, distance_threshold, distance_metric, max_l0, immutable_x, immutable_z, X_mins, X_maxs, Z_mins, Z_maxs, col_names_X, col_names_Z, var_types_X, var_types_Z, dropped_cats_X, dropped_cats_Z, objective, weights_x, bounds_x, weights_z, bounds_z, A_x, A_z, b, confidence_level, cov_matrix, H_analytic, gurobi_verbose, gurobi_params, gurobi_log, **kwargs):
     """
     Core function to solve the counterfactual optimization problem using Gurobi.
     
@@ -52,8 +52,8 @@ def GPLSIM_CE(beta, gamma, knots, coeffs, init_x, init_z, x0, z0, family, link, 
     distance_threshold : float (Max allowable distance, or None)
     distance_metric: str ('default', 'gower', 'l1', 'l2', 'l0+l1')
     max_l0         : int or None (Maximum number of feature changes allowed)
-    inmutable_x    : list[bool] (Flags for which X features cannot be changed)
-    inmutable_z    : list[bool] (Flags for which Z features cannot be changed)
+    immutable_x    : list[bool] (Flags for which X features cannot be changed)
+    immutable_z    : list[bool] (Flags for which Z features cannot be changed)
     X_mins         : list[float] (Minimum values of X for normalization)
     X_maxs         : list[float] (Maximum values of X for normalization)
     Z_mins         : list[float] (Minimum values of Z for normalization)
@@ -81,6 +81,11 @@ def GPLSIM_CE(beta, gamma, knots, coeffs, init_x, init_z, x0, z0, family, link, 
     
     Returns distance, prediction, l0_val, robust_pred_val, confidence_val, x_vals, z_vals, status, mipgap, theta_val, robust_theta, y_sqrt_val
     """
+    if "inmutable_x" in kwargs:
+        immutable_x = kwargs.pop("inmutable_x")
+    if "inmutable_z" in kwargs:
+        immutable_z = kwargs.pop("inmutable_z")
+
     n_x = len(beta)
     n_z = len(gamma)
     n=n_x+n_z
@@ -135,7 +140,7 @@ def GPLSIM_CE(beta, gamma, knots, coeffs, init_x, init_z, x0, z0, family, link, 
             x_unnorm.append(yi)
             model.addConstr(xi == (yi - X_mins[j]) / (X_maxs[j] - X_mins[j]))
             l2_indices_x.append(j)
-        if inmutable_x[j]:
+        if immutable_x[j]:
             model.addConstr(yi == x0[j])
         if bounds_x[j][0] is not None:
             model.addConstr(yi >= bounds_x[j][0])
@@ -190,7 +195,7 @@ def GPLSIM_CE(beta, gamma, knots, coeffs, init_x, init_z, x0, z0, family, link, 
             z_unnorm.append(yi)
             model.addConstr(zi == (yi - Z_mins[j]) / (Z_maxs[j] - Z_mins[j]))
             l2_indices_z.append(j)
-        if inmutable_z[j]:
+        if immutable_z[j]:
             model.addConstr(yi == z0[j])
         if bounds_z[j][0] is not None:
             model.addConstr(yi >= bounds_z[j][0])

@@ -1,6 +1,6 @@
 """
-gplsim_loglik.py
-----------------
+fit_GPLSIM.py
+-------------
 Fits the appropriate model given X (single-index part) and Z (linear part)
 and returns (beta, gamma, knots, coeffs) — the parametric description of
 the fitted model.
@@ -53,7 +53,7 @@ def _r_to_array(r_obj) -> np.ndarray:
     return np.array(r_obj).ravel()
 
 # ---------------------------------------------------------------------------
-# Helper to fit piecewise polinomial from grid
+# Helper to fit piecewise polynomial from grid
 # ---------------------------------------------------------------------------
 
 def _fit_piecewise_from_grid(t_grid, eta_grid, knots_full, degree=3):

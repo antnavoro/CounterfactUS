@@ -115,7 +115,7 @@ def test_immutable_features(dummy_data):
     results_df = compute_counterfactuals(
         X=X_train, Z=Z_train, Y=Y_train,
         x0s=x_query, z0s=z_query,
-        inmutable_z=["z1"],
+        immutable_z=["z1"],
         gurobi_verbose=False,
         plot_figures=False,
         output_csv=None
@@ -129,6 +129,31 @@ def test_immutable_features(dummy_data):
         z0_1 = results_df.iloc[0]["z0_z1"]
         zcf_1 = results_df.iloc[0]["z_cf_z1"]
         assert z0_1 == zcf_1, "Immutable feature 'z1' changed!"
+
+def test_inmutable_features_backward_compatibility(dummy_data):
+    """
+    Test that the deprecated inmutable_z argument still works and raises a warning.
+    """
+    X_train, Z_train, Y_train, x_query, z_query = dummy_data
+    
+    with pytest.deprecated_call():
+        results_df = compute_counterfactuals(
+            X=X_train, Z=Z_train, Y=Y_train,
+            x0s=x_query, z0s=z_query,
+            inmutable_z=["z1"],
+            gurobi_verbose=False,
+            plot_figures=False,
+            output_csv=None
+        )
+    
+    if results_df.empty or "status" not in results_df.columns:
+        return
+        
+    status = results_df.iloc[0].get("status", None)
+    if status == 2:
+        z0_1 = results_df.iloc[0]["z0_z1"]
+        zcf_1 = results_df.iloc[0]["z_cf_z1"]
+        assert z0_1 == zcf_1, "Deprecated inmutable_z did not preserve immutability!"
 
 def test_prediction_threshold(dummy_data):
     """

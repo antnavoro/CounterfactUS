@@ -215,61 +215,65 @@ def _parse_weights(weights, col_names, original_col_names):
     return w_out
 
 
-def _parse_inmutables(inmutable, col_names, original_col_names):
+def _parse_immutables(immutable, col_names, original_col_names):
     """
     Parses user-provided immutability constraints and transforms them into a list of booleans: [True, False, ...].
     True means the feature is immutable (cannot be changed). False means it can be changed.
-    Supports inmutable as:
+    Supports immutable as:
     - a list of strings (names of immutable features)
     - a list of booleans (matched by original features or expanded features)
     - a dict (matched by column name, categorical prefix, or index) to boolean.
-    If no inmutable constraints are provided, defaults to [False, ...] for all expanded features.
+    If no immutable constraints are provided, defaults to [False, ...] for all expanded features.
     """
     n = len(col_names)
-    inm_out = [False for _ in range(n)]
+    imm_out = [False for _ in range(n)]
     
-    if inmutable is None:
-        return inm_out
+    if immutable is None:
+        return imm_out
 
     # If it's a list of strings, convert to dict {name: True}
-    if isinstance(inmutable, list) and all(isinstance(x, str) for x in inmutable):
-        inmutable = {k: True for k in inmutable}
+    if isinstance(immutable, list) and all(isinstance(x, str) for x in immutable):
+        immutable = {k: True for k in immutable}
         
     # If it's a list of booleans
-    elif isinstance(inmutable, list):
-        if len(inmutable) == len(original_col_names):
-            inmutable = dict(zip(original_col_names, inmutable))
-        elif len(inmutable) == len(col_names):
-            inmutable = dict(zip(col_names, inmutable))
+    elif isinstance(immutable, list):
+        if len(immutable) == len(original_col_names):
+            immutable = dict(zip(original_col_names, immutable))
+        elif len(immutable) == len(col_names):
+            immutable = dict(zip(col_names, immutable))
         else:
-            raise ValueError(f"List of inmutable booleans must have length {len(original_col_names)} (original) or {len(col_names)} (expanded), got {len(inmutable)}")
+            raise ValueError(f"List of immutable booleans must have length {len(original_col_names)} (original) or {len(col_names)} (expanded), got {len(immutable)}")
 
-    if isinstance(inmutable, dict):
-        for key, val in inmutable.items():
+    if isinstance(immutable, dict):
+        for key, val in immutable.items():
             val = bool(val)
                 
             if isinstance(key, int):
                 if 0 <= key < len(original_col_names):
                     key = original_col_names[key]
                 else:
-                    raise IndexError(f"Inmutable index {key} out of bounds for original features.")
+                    raise IndexError(f"Immutable index {key} out of bounds for original features.")
             
             if isinstance(key, str):
                 if key in col_names:
                     idx = col_names.index(key)
-                    inm_out[idx] = val
+                    imm_out[idx] = val
                 else:
                     found = False
                     for i, c in enumerate(col_names):
                         if c.startswith(f"{key}__cat_"):
-                            inm_out[i] = val
+                            imm_out[i] = val
                             found = True
                     if not found:
-                        raise ValueError(f"Inmutable key '{key}' not found in columns or categorical groups.")
+                        raise ValueError(f"Immutable key '{key}' not found in columns or categorical groups.")
     else:
-        raise TypeError("inmutable must be None, a list of strings, a list of booleans, or a dict.")
+        raise TypeError("immutable must be None, a list of strings, a list of booleans, or a dict.")
         
-    return inm_out
+    return imm_out
+
+
+# Backward compatibility alias
+_parse_inmutables = _parse_immutables
 
 
 def _parse_bounds(bounds, col_names, original_col_names, mins=None, maxs=None):
@@ -408,6 +412,8 @@ def compute_counterfactuals(
     init_z_list:    Optional[List[np.ndarray]] = None,
     weights_x:      Optional[Union[Dict, List]] = None,
     weights_z:      Optional[Union[Dict, List]] = None,
+    immutable_x:    Optional[Union[List[str], List[bool], Dict]] = None,
+    immutable_z:    Optional[Union[List[str], List[bool], Dict]] = None,
     inmutable_x:    Optional[Union[List[str], List[bool], Dict]] = None,
     inmutable_z:    Optional[Union[List[str], List[bool], Dict]] = None,
     bounds_x:       Optional[Union[List[Tuple], Dict]] = None,
@@ -424,6 +430,7 @@ def compute_counterfactuals(
     gurobi_params:        Optional[Dict] = None,
     plot_figures:         bool = True,
     use_zip_iteration:    bool = False,
+    **kwargs,
 ) -> pd.DataFrame:
     """
     Given some data X, Y, Z, fit a GPLSIM model and compute counterfactual explanations.
@@ -442,15 +449,15 @@ def compute_counterfactuals(
     init_z_list    : optional list of initial Z guesses.
     weights_x      : distance weights for X; dict or list.
     weights_z      : distance weights for Z; dict or list.
-    inmutable_x    : immutability constraints for X; list of str, list of bool, or dict.
-    inmutable_z    : immutability constraints for Z; list of str, list of bool, or dict.
+    immutable_x    : immutability constraints for X; list of str, list of bool, or dict.
+    immutable_z    : immutability constraints for Z; list of str, list of bool, or dict.
     bounds_x       : list of (lb, ub) bounds or dict for X; None entries = no bound.
     bounds_z       : list of (lb, ub) bounds or dict for Z; None entries = no bound.
     A_x, A_z, b    : optional linear constraints A_x·x + A_z·z <= b.
     col_names_X    : feature names for X.
     col_names_Z    : feature names for Z.
     confidence_level : confidence level(s) for robust constraints or objectives; scalar or list.
-    output_csv     : path for results CSV (default: 'cf_results.csv').
+    output_csv     : path for results CSV (default: 'counterfactuals_results.csv').
     gurobi_verbose : print Gurobi log (default False).
     gurobi_log     : save per-solve Gurobi log files (default False).
     gurobi_params  : additional Gurobi parameters dict.
@@ -462,6 +469,34 @@ def compute_counterfactuals(
     -------
     pd.DataFrame with all results (also written to output_csv).
     """
+    import warnings
+    if inmutable_x is not None:
+        warnings.warn(
+            "The 'inmutable_x' argument is deprecated and will be removed in a future release. "
+            "Please use 'immutable_x' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if immutable_x is None:
+            immutable_x = inmutable_x
+
+    if inmutable_z is not None:
+        warnings.warn(
+            "The 'inmutable_z' argument is deprecated and will be removed in a future release. "
+            "Please use 'immutable_z' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if immutable_z is None:
+            immutable_z = inmutable_z
+
+    if "family_name" in kwargs:
+        family = kwargs.pop("family_name")
+    if "link_name" in kwargs:
+        link = kwargs.pop("link_name")
+    if kwargs:
+        unexpected = ", ".join(repr(k) for k in kwargs.keys())
+        raise TypeError(f"compute_counterfactuals() got unexpected keyword argument(s): {unexpected}")
     import rpy2.rinterface_lib.callbacks
     import sys
     if r_verbose:
@@ -661,8 +696,8 @@ def compute_counterfactuals(
     else:
         weights_x = _parse_weights(weights_x, col_names_X, original_col_names_X)
         weights_z = _parse_weights(weights_z, col_names_Z, original_col_names_Z)
-    inmutable_x = _parse_inmutables(inmutable_x, col_names_X, original_col_names_X)
-    inmutable_z = _parse_inmutables(inmutable_z, col_names_Z, original_col_names_Z)
+    immutable_x = _parse_immutables(immutable_x, col_names_X, original_col_names_X)
+    immutable_z = _parse_immutables(immutable_z, col_names_Z, original_col_names_Z)
     bounds_x = _parse_bounds(bounds_x, col_names_X, original_col_names_X, X_mins, X_maxs)
     bounds_z = _parse_bounds(bounds_z, col_names_Z, original_col_names_Z, Z_mins, Z_maxs)
 
@@ -811,7 +846,7 @@ def compute_counterfactuals(
         has_custom_bounds = any(b != [None, None] for b in bounds_x) or any(b != [None, None] for b in bounds_z)
         if has_custom_bounds:
             prob_summary.append("    - Custom feature bounds")
-        if (inmutable_x is not None and any(inmutable_x)) or (inmutable_z is not None and any(inmutable_z)):
+        if (immutable_x is not None and any(immutable_x)) or (immutable_z is not None and any(immutable_z)):
             prob_summary.append("    - Immutable features preserved")
             
         print("\n".join(prob_summary))
@@ -834,7 +869,7 @@ def compute_counterfactuals(
             beta=beta, gamma=gamma, knots=knots, coeffs=coeffs, 
             init_x=current_init_x, init_z=current_init_z, x0=x0, z0=z0, 
             family=family, link=link, prediction_threshold=current_p_t, distance_threshold=d_t, distance_metric=distance, max_l0=l0, 
-            inmutable_x=inmutable_x, inmutable_z=inmutable_z, 
+            immutable_x=immutable_x, immutable_z=immutable_z, 
             X_mins=X_mins, X_maxs=X_maxs, Z_mins=Z_mins, Z_maxs=Z_maxs, 
             col_names_X=col_names_X, col_names_Z=col_names_Z, 
             var_types_X=var_types_X, var_types_Z=var_types_Z, 
